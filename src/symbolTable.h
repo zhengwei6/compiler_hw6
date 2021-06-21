@@ -62,6 +62,8 @@ typedef struct FunctionSignature
 typedef struct SymbolAttribute
 {
     SymbolAttributeKind attributeKind;
+    int offset;
+    int global;
 
     union
     {
@@ -80,8 +82,6 @@ typedef struct SymbolTableEntry
     char* name;
     SymbolAttribute* attribute;
     int nestingLevel;
-    int offset;
-    int place;
 
 } SymbolTableEntry;
 

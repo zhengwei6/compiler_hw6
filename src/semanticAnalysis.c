@@ -3,6 +3,7 @@
 #include <string.h>
 #include "header.h"
 #include "symbolTable.h"
+#include "macros.h"
 int g_anyErrorOccur = 0;
 
 DATA_TYPE getBiggerType(DATA_TYPE dataType1, DATA_TYPE dataType2);
@@ -372,6 +373,7 @@ void declareIdList(AST_NODE* declarationNode, SymbolAttributeKind isVariableOrTy
                 else
                 {
                     attribute->attr.typeDescriptor = typeNode->semantic_value.identifierSemanticValue.symbolTableEntry->attribute->attr.typeDescriptor;
+                    processExprRelatedNode(traverseIDList->child);
                 }
                 break;
             default:
@@ -763,28 +765,36 @@ void evaluateExprValue(AST_NODE* exprNode)
                 exprNode->semantic_value.exprSemanticValue.constEvalValue.fValue = leftValue / rightValue;
                 break;
             case BINARY_OP_EQ:
-                exprNode->semantic_value.exprSemanticValue.constEvalValue.fValue = leftValue == rightValue;
+                exprNode->dataType = INT_TYPE;
+                exprNode->semantic_value.exprSemanticValue.constEvalValue.iValue = leftValue == rightValue;
                 break;
             case BINARY_OP_GE:
-                exprNode->semantic_value.exprSemanticValue.constEvalValue.fValue = leftValue >= rightValue;
+                exprNode->dataType = INT_TYPE;
+                exprNode->semantic_value.exprSemanticValue.constEvalValue.iValue = leftValue >= rightValue;
                 break;
             case BINARY_OP_LE:
-                exprNode->semantic_value.exprSemanticValue.constEvalValue.fValue = leftValue <= rightValue;
+                exprNode->dataType = INT_TYPE;
+                exprNode->semantic_value.exprSemanticValue.constEvalValue.iValue = leftValue <= rightValue;
                 break;
             case BINARY_OP_NE:
-                exprNode->semantic_value.exprSemanticValue.constEvalValue.fValue = leftValue != rightValue;
+                exprNode->dataType = INT_TYPE;
+                exprNode->semantic_value.exprSemanticValue.constEvalValue.iValue = leftValue != rightValue;
                 break;
             case BINARY_OP_GT:
-                exprNode->semantic_value.exprSemanticValue.constEvalValue.fValue = leftValue > rightValue;
+                exprNode->dataType = INT_TYPE;
+                exprNode->semantic_value.exprSemanticValue.constEvalValue.iValue = leftValue > rightValue;
                 break;
             case BINARY_OP_LT:
-                exprNode->semantic_value.exprSemanticValue.constEvalValue.fValue = leftValue < rightValue;
+                exprNode->dataType = INT_TYPE;
+                exprNode->semantic_value.exprSemanticValue.constEvalValue.iValue = leftValue < rightValue;
                 break;
             case BINARY_OP_AND:
-                exprNode->semantic_value.exprSemanticValue.constEvalValue.fValue = leftValue && rightValue;
+                exprNode->dataType = INT_TYPE;
+                exprNode->semantic_value.exprSemanticValue.constEvalValue.iValue = leftValue && rightValue;
                 break;
             case BINARY_OP_OR:
-                exprNode->semantic_value.exprSemanticValue.constEvalValue.fValue = leftValue || rightValue;
+                exprNode->dataType = INT_TYPE;
+                exprNode->semantic_value.exprSemanticValue.constEvalValue.iValue = leftValue || rightValue;
                 break;
             default:
                 printf("Unhandled case in void evaluateExprValue(AST_NODE* exprNode)\n");
@@ -884,6 +894,21 @@ void processExprNode(AST_NODE* exprNode)
             evaluateExprValue(exprNode);
             exprNode->semantic_value.exprSemanticValue.isConstEval = 1;
         }
+
+        switch(getExprOp(exprNode)) {
+            case BINARY_OP_EQ:
+            case BINARY_OP_GE:
+            case BINARY_OP_LE:
+            case BINARY_OP_NE:
+            case BINARY_OP_GT:
+            case BINARY_OP_LT:
+            case BINARY_OP_AND:
+            case BINARY_OP_OR:
+                exprNode->dataType = INT_TYPE;
+                break;
+            default:
+                break;
+        }
     }
     else
     {
@@ -908,7 +933,6 @@ void processExprNode(AST_NODE* exprNode)
         {
             exprNode->dataType = operand->dataType;
         }
-
         
         if((exprNode->dataType != ERROR_TYPE) &&
            (operand->nodeType == CONST_VALUE_NODE || (operand->nodeType == EXPR_NODE && operand->semantic_value.exprSemanticValue.isConstEval))
@@ -918,6 +942,13 @@ void processExprNode(AST_NODE* exprNode)
             exprNode->semantic_value.exprSemanticValue.isConstEval = 1;
         }
 
+        switch(getExprOp(exprNode)) {
+            case UNARY_OP_LOGICAL_NEGATION:
+                exprNode->dataType = INT_TYPE;
+                break;
+            default:
+                break;
+        }
     }
 }
 
