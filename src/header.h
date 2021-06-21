@@ -105,7 +105,7 @@ typedef struct EXPRSemanticValue
     
     int isConstEval;
 
-    struct
+    union
     {
         int iValue;
         float fValue;
@@ -163,9 +163,6 @@ struct AST_NODE {
         EXPRSemanticValue exprSemanticValue;
 		CON_Type *const1;
 	} semantic_value;
-
-    long long offset;
-    char* globalLabel;
 };
 typedef struct AST_NODE AST_NODE;
 

@@ -2,7 +2,6 @@
 #define __SYMBOL_TABLE_H__
 
 #include "header.h"
-// This file is for reference only, you are not required to follow the implementation. //
 
 
 //SYMBOL_TABLE_PREINSERT_NAME
@@ -81,43 +80,27 @@ typedef struct SymbolTableEntry
     char* name;
     SymbolAttribute* attribute;
     int nestingLevel;
+    int offset;
+    int place;
 
-    long long offset;
-    char* globalLabel;
 } SymbolTableEntry;
-
-typedef struct ScopeStack
-{
-    struct ScopeStack* prevScope;
-    SymbolTableEntry* scopeStart;
-} ScopeStack;
 
 typedef struct SymbolTable
 {
-    /*
-        Scope is maintained by scopeStack.
-        There is no concept of scope in hashTable. hashTable only keep tracks of all entries that are available in the 
-        current scope.
-        hashTable does not care about which scope the entries lives in. If there is a name conflict with the outer scope,
-        remove the entry from the outer scope in hashTable and insert the entry in the inner scope so that the hashTable uses
-        the entry in the inner scope.
-        The entry from the outer scope will not be deleted (tracked by scopeStack) and will return to hashTable when the inner
-        scope is closed and the program returns to the outer scope.
-    */
     SymbolTableEntry* hashTable[HASH_TABLE_SIZE];
-    ScopeStack* scopeStack;
+    SymbolTableEntry** scopeDisplay;
     int currentLevel;
+    int scopeDisplayElementCount;
 } SymbolTable;
 
 
 void initializeSymbolTable();
 void symbolTableEnd();
 SymbolTableEntry* retrieveSymbol(char* symbolName);
-SymbolTableEntry* insertSymbol(char* symbolName, SymbolAttribute* attribute);
+SymbolTableEntry* enterSymbol(char* symbolName, SymbolAttribute* attribute);
 void removeSymbol(char* symbolName);
 int declaredLocally(char* symbolName);
-void openNewScope();
-void closeCurrentScope();
-int isCurrentScopeGlobal();
+void openScope();
+void closeScope();
 
 #endif

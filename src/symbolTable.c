@@ -2,16 +2,15 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
-// This file is for reference only, you are not required to follow the implementation. //
 
-int HASH(char* str) {
-	int idx = 0;
-	while (*str) {
+int HASH(char * str) {
+	int idx=0;
+	while (*str){
 		idx = idx << 1;
-		idx += *str;
+		idx+=*str;
 		str++;
 	}
-	return (idx & (HASH_TABLE_SIZE - 1));
+	return (idx & (HASH_TABLE_SIZE-1));
 }
 
 SymbolTable symbolTable;
@@ -26,145 +25,153 @@ SymbolTableEntry* newSymbolTableEntry(int nestingLevel)
     symbolTableEntry->attribute = NULL;
     symbolTableEntry->name = NULL;
     symbolTableEntry->nestingLevel = nestingLevel;
-    symbolTableEntry->offset = 0;
-    symbolTableEntry->globalLabel = NULL;
     return symbolTableEntry;
 }
 
-void removeFromHashChain(int hashIndex, SymbolTableEntry* entry)
+void removeFromHashTrain(int hashIndex, SymbolTableEntry* entry)
 {
-    if (entry->prevInHashChain) {
+    if(entry->prevInHashChain)
+    {
         entry->prevInHashChain->nextInHashChain = entry->nextInHashChain;
-    } else {
+    }
+    else
+    {
         symbolTable.hashTable[hashIndex] = entry->nextInHashChain;
     }
-    
-    if (entry->nextInHashChain) {
+
+
+    if(entry->nextInHashChain)
+    {
         entry->nextInHashChain->prevInHashChain = entry->prevInHashChain;
     }
 
-    /*
-        Cannot free the entry yet. The entry may be needed when the program returned to the scope it resides in.
-        The entry will be freed when the scope it resides in is closed.
-     */
-    entry->nextInHashChain = entry->prevInHashChain = NULL;
+    entry->nextInHashChain = NULL;
+    entry->prevInHashChain = NULL;
 }
 
-void insertIntoHashChain(int hashIndex, SymbolTableEntry* entry)
+void enterIntoHashTrain(int hashIndex, SymbolTableEntry* entry)
 {
-    SymbolTableEntry* head = symbolTable.hashTable[hashIndex];
-    if (head)
-        head->prevInHashChain = entry;
-    entry->nextInHashChain = head;
+    SymbolTableEntry* chainHead = symbolTable.hashTable[hashIndex];
+    if(chainHead)
+    {
+        chainHead->prevInHashChain = entry;
+        entry->nextInHashChain = chainHead;
+    }
     symbolTable.hashTable[hashIndex] = entry;
-}
-
-SymbolAttribute* createTypeSymbol(DATA_TYPE dataType)
-{
-    SymbolAttribute* typeAttribute = (SymbolAttribute*)malloc(sizeof(SymbolAttribute));
-    typeAttribute->attributeKind = TYPE_ATTRIBUTE;
-    typeAttribute->attr.typeDescriptor = (TypeDescriptor*)malloc(sizeof(TypeDescriptor));
-    typeAttribute->attr.typeDescriptor->kind = SCALAR_TYPE_DESCRIPTOR;
-    typeAttribute->attr.typeDescriptor->properties.dataType = dataType;
-    return typeAttribute;
-}
-
-SymbolAttribute* createSysLibFunctionAttribute(DATA_TYPE dataType)
-{
-    SymbolAttribute* functionAttribute = (SymbolAttribute*)malloc(sizeof(SymbolAttribute));
-    functionAttribute->attributeKind = FUNCTION_SIGNATURE;
-    functionAttribute->attr.functionSignature = (FunctionSignature*)malloc(sizeof(FunctionSignature));
-    functionAttribute->attr.functionSignature->parametersCount = 0;
-    functionAttribute->attr.functionSignature->parameterList = NULL;
-    functionAttribute->attr.functionSignature->returnType = dataType;
-    return functionAttribute;
-}
-
-ScopeStack* getNewScope()
-{
-    ScopeStack* newScope = (ScopeStack*)malloc(sizeof(ScopeStack));
-    newScope->prevScope = NULL;
-    newScope->scopeStart = NULL;
-    return newScope;
 }
 
 void initializeSymbolTable()
 {
     symbolTable.currentLevel = 0;
-    for (int i = 0; i < HASH_TABLE_SIZE; ++i)
-        symbolTable.hashTable[i] = NULL;
-    
-    symbolTable.scopeStack = getNewScope();
+    symbolTable.scopeDisplayElementCount = 10;
+    symbolTable.scopeDisplay = (SymbolTableEntry**)malloc(symbolTable.scopeDisplayElementCount * sizeof(SymbolTableEntry*));
+    int index = 0;
+    for(index = 0; index != symbolTable.scopeDisplayElementCount; ++index)
+    {
+        symbolTable.scopeDisplay[index] = NULL;
+    }
+    for(index = 0; index != HASH_TABLE_SIZE; ++index)
+    {
+        symbolTable.hashTable[index] = NULL;
+    }
 
-    // insert basic type symbols so processTypeNode can validate basic type
-    SymbolAttribute* intAttribute = createTypeSymbol(INT_TYPE);
-    insertSymbol(SYMBOL_TABLE_INT_NAME, intAttribute);
+    SymbolAttribute* intAttribute = (SymbolAttribute*)malloc(sizeof(SymbolAttribute));
+    intAttribute->attributeKind = TYPE_ATTRIBUTE;
+    intAttribute->attr.typeDescriptor = (TypeDescriptor*)malloc(sizeof(TypeDescriptor));
+    intAttribute->attr.typeDescriptor->kind = SCALAR_TYPE_DESCRIPTOR;
+    intAttribute->attr.typeDescriptor->properties.dataType = INT_TYPE;
+    enterSymbol(SYMBOL_TABLE_INT_NAME, intAttribute);
 
-    SymbolAttribute* floatAttribute = createTypeSymbol(FLOAT_TYPE);
-    insertSymbol(SYMBOL_TABLE_FLOAT_NAME, floatAttribute);
+    SymbolAttribute* floatAttribute = (SymbolAttribute*)malloc(sizeof(SymbolAttribute));
+    floatAttribute->attributeKind = TYPE_ATTRIBUTE;
+    floatAttribute->attr.typeDescriptor = (TypeDescriptor*)malloc(sizeof(TypeDescriptor));
+    floatAttribute->attr.typeDescriptor->kind = SCALAR_TYPE_DESCRIPTOR;
+    floatAttribute->attr.typeDescriptor->properties.dataType = FLOAT_TYPE;
+    enterSymbol(SYMBOL_TABLE_FLOAT_NAME, floatAttribute);
 
-    SymbolAttribute* voidAttribute = createTypeSymbol(VOID_TYPE);
-    insertSymbol(SYMBOL_TABLE_VOID_NAME, voidAttribute);
+    SymbolAttribute* voidAttribute = (SymbolAttribute*)malloc(sizeof(SymbolAttribute));
+    voidAttribute->attributeKind = TYPE_ATTRIBUTE;
+    voidAttribute->attr.typeDescriptor = (TypeDescriptor*)malloc(sizeof(TypeDescriptor));
+    voidAttribute->attr.typeDescriptor->kind = SCALAR_TYPE_DESCRIPTOR;
+    voidAttribute->attr.typeDescriptor->properties.dataType = VOID_TYPE;
+    enterSymbol(SYMBOL_TABLE_VOID_NAME, voidAttribute);
 
-    // insert system functions read and fread
-    SymbolAttribute* sysLibReadAttribute = createSysLibFunctionAttribute(INT_TYPE);
-    insertSymbol(SYMBOL_TABLE_SYS_LIB_READ, sysLibReadAttribute);
+    SymbolAttribute* readAttribute = NULL;
+    readAttribute = (SymbolAttribute*)malloc(sizeof(SymbolAttribute));
+    readAttribute->attributeKind = FUNCTION_SIGNATURE;
+    readAttribute->attr.functionSignature = (FunctionSignature*)malloc(sizeof(FunctionSignature));
+    readAttribute->attr.functionSignature->returnType = INT_TYPE;
+    readAttribute->attr.functionSignature->parameterList = NULL;
+    readAttribute->attr.functionSignature->parametersCount = 0;
+    enterSymbol(SYMBOL_TABLE_SYS_LIB_READ, readAttribute);
 
-    SymbolAttribute* sysLibFreadAttribute = createSysLibFunctionAttribute(FLOAT_TYPE);
-    insertSymbol(SYMBOL_TABLE_SYS_LIB_FREAD, sysLibFreadAttribute);
+    SymbolAttribute* freadAttribute = NULL;
+    freadAttribute = (SymbolAttribute*)malloc(sizeof(SymbolAttribute));
+    freadAttribute->attributeKind = FUNCTION_SIGNATURE;
+    freadAttribute->attr.functionSignature = (FunctionSignature*)malloc(sizeof(FunctionSignature));
+    freadAttribute->attr.functionSignature->returnType = FLOAT_TYPE;
+    freadAttribute->attr.functionSignature->parameterList = NULL;
+    freadAttribute->attr.functionSignature->parametersCount = 0;
+    enterSymbol(SYMBOL_TABLE_SYS_LIB_FREAD, freadAttribute);
 }
 
 void symbolTableEnd()
 {
-    for (int i = 0; i < HASH_TABLE_SIZE; ++i) {
-        SymbolTableEntry* head = symbolTable.hashTable[i];
-        while (head) {
-            SymbolTableEntry* next = head->nextInHashChain;
-            free(head);
-            head = next;
-        }
-    }
+    // clean up
 }
 
 SymbolTableEntry* retrieveSymbol(char* symbolName)
 {
     int hashIndex = HASH(symbolName);
-    SymbolTableEntry* head = symbolTable.hashTable[hashIndex];
-    
-    while (head) {
-        if (strcmp(symbolName, head->name) == 0)
-            return head;
-        head = head->nextInHashChain;
+    SymbolTableEntry* hashChain = symbolTable.hashTable[hashIndex];
+    while(hashChain)
+    {
+        if(strcmp(hashChain->name, symbolName) == 0)
+        {
+            return hashChain;
+        }
+        else
+        {
+            hashChain = hashChain->nextInHashChain;
+        }
     }
-
-    return NULL; // not found
+    return NULL;
 }
 
-SymbolTableEntry* insertSymbol(char* symbolName, SymbolAttribute* attribute)
+SymbolTableEntry* enterSymbol(char* symbolName, SymbolAttribute* attribute)
 {
     int hashIndex = HASH(symbolName);
-    SymbolTableEntry* head = symbolTable.hashTable[hashIndex];
+    SymbolTableEntry* hashChain = symbolTable.hashTable[hashIndex];
     SymbolTableEntry* newEntry = newSymbolTableEntry(symbolTable.currentLevel);
-    newEntry->name = symbolName;
     newEntry->attribute = attribute;
+    newEntry->name = symbolName;
 
-    while (head) {
-        if (strcmp(symbolName, head->name) == 0) {
-            if (symbolTable.currentLevel == head->nestingLevel) { // already declared in the same scope
+    while(hashChain)
+    {
+        if(strcmp(hashChain->name, symbolName) == 0)
+        {
+            if(hashChain->nestingLevel == symbolTable.currentLevel)
+            {
+                printf("void enterSymbol(...): ID \'%s\' is redeclared(at the same level#%d).\n", symbolName, symbolTable.currentLevel);
                 free(newEntry);
                 return NULL;
-            } else {
-                removeFromHashChain(hashIndex, head);
-                newEntry->sameNameInOuterLevel = head;
+            }
+            else
+            {
+                removeFromHashTrain(hashIndex, hashChain);
+                newEntry->sameNameInOuterLevel = hashChain;
                 break;
             }
         }
-        head = head->nextInHashChain;
+        else
+        {
+            hashChain = hashChain->nextInHashChain;
+        }
     }
-
-    insertIntoHashChain(hashIndex, newEntry);
-    newEntry->nextInSameLevel = symbolTable.scopeStack->scopeStart;
-    symbolTable.scopeStack->scopeStart = newEntry;
+    enterIntoHashTrain(hashIndex, newEntry);
+    newEntry->nextInSameLevel = symbolTable.scopeDisplay[symbolTable.currentLevel];
+    symbolTable.scopeDisplay[symbolTable.currentLevel] = newEntry;
+    
     return newEntry;
 }
 
@@ -172,91 +179,131 @@ SymbolTableEntry* insertSymbol(char* symbolName, SymbolAttribute* attribute)
 void removeSymbol(char* symbolName)
 {
     int hashIndex = HASH(symbolName);
-    SymbolTableEntry* head = symbolTable.hashTable[hashIndex];
-
-    while (head) {
-        if (strcmp(symbolName, head->name) == 0) {
-            if (symbolTable.currentLevel != head->nestingLevel)
+    SymbolTableEntry* hashChain = symbolTable.hashTable[hashIndex];
+    while(hashChain)
+    {
+        if(strcmp(hashChain->name, symbolName) == 0)
+        {
+            if(hashChain->nestingLevel != symbolTable.currentLevel)
+            {
+                printf("void removeSymbol(...) Error: try to removed ID \'%s\' from the scope other than currentScope.\n", symbolName);
                 return;
-            removeFromHashChain(hashIndex, head);
-            if (head->sameNameInOuterLevel)
-                insertIntoHashChain(hashIndex, head->sameNameInOuterLevel);
-            break;
+            }
+            else
+            {
+                removeFromHashTrain(hashIndex, hashChain);
+                if(hashChain->sameNameInOuterLevel)
+                {
+                    enterIntoHashTrain(hashIndex, hashChain->sameNameInOuterLevel);
+                }
+                break;
+            }
         }
-        head = head->nextInHashChain;
+        else
+        {
+            hashChain = hashChain->nextInHashChain;
+        }
     }
 
-    if (!head) {
-        fprintf(stderr, "%s not found.\n", symbolName);
+    if(!hashChain)
+    {
+        printf("void removeSymbol(...) Error: try to removed ID \'%s\' not in the symbol table.\n", symbolName);
         return;
     }
 
-    head = symbolTable.scopeStack->scopeStart;
-    SymbolTableEntry* prev = NULL;
-
-    // remove from scopeStack
-    while (head) {
-        if (strcmp(symbolName, head->name) == 0) {
-            if (!prev) {
-                symbolTable.scopeStack->scopeStart = head->nextInSameLevel;
-            } else {
-                prev->nextInSameLevel = head->nextInSameLevel;
+    SymbolTableEntry* tmpPrev = NULL;
+    SymbolTableEntry* scopeChain = symbolTable.scopeDisplay[symbolTable.currentLevel];
+    while(scopeChain)
+    {
+        if(strcmp(scopeChain->name, symbolName) == 0)
+        {
+            if(tmpPrev)
+            {
+                tmpPrev->nextInSameLevel = scopeChain->nextInSameLevel;
             }
+            else
+            {
+                symbolTable.scopeDisplay[symbolTable.currentLevel] = scopeChain->nextInSameLevel;
+            }
+            free(scopeChain);
             break;
         }
-        prev = head;
-        head = head->nextInSameLevel;
+        else
+        {
+            tmpPrev = scopeChain;
+            scopeChain = scopeChain->nextInSameLevel;
+        }
     }
 }
 
 int declaredLocally(char* symbolName)
 {
     int hashIndex = HASH(symbolName);
-    SymbolTableEntry* head = symbolTable.hashTable[hashIndex];
-    
-    while (head) {
-        if (strcmp(symbolName, head->name) == 0) {
-            if (symbolTable.currentLevel == head->nestingLevel)
+    SymbolTableEntry* hashChain = symbolTable.hashTable[hashIndex];
+    while(hashChain)
+    {
+        if(strcmp(hashChain->name, symbolName) == 0)
+        {
+            if(hashChain->nestingLevel == symbolTable.currentLevel)
+            {
                 return 1;
+            }
             else
+            {
                 return 0;
+            }
         }
-        head = head->nextInHashChain;
+        else
+        {
+            hashChain = hashChain->nextInHashChain;
+        }
     }
     return 0;
 }
 
-void openNewScope()
+void openScope()
 {
-    symbolTable.currentLevel += 1;
-    ScopeStack* newScope = getNewScope();
-    newScope->prevScope = symbolTable.scopeStack;
-    symbolTable.scopeStack = newScope;
+    ++symbolTable.currentLevel;
+    if(symbolTable.currentLevel == symbolTable.scopeDisplayElementCount)
+    {
+        SymbolTableEntry** oldScopeDisplay = symbolTable.scopeDisplay;
+        symbolTable.scopeDisplay = (SymbolTableEntry**)malloc(symbolTable.scopeDisplayElementCount * 2 * sizeof(SymbolTableEntry*));
+        memcpy(symbolTable.scopeDisplay, oldScopeDisplay, symbolTable.scopeDisplayElementCount * sizeof(SymbolTableEntry*));
+        int index = 0;
+        for(index = symbolTable.scopeDisplayElementCount; index != symbolTable.scopeDisplayElementCount * 2; ++index)
+        {
+            symbolTable.scopeDisplay[index] = NULL;
+        }
+        symbolTable.scopeDisplayElementCount = 2 * symbolTable.scopeDisplayElementCount;
+        free(oldScopeDisplay);
+    }
+    //
+    symbolTable.scopeDisplay[symbolTable.currentLevel] = NULL;
+    //
 }
 
-void closeCurrentScope()
+void closeScope()
 {
-    if (symbolTable.currentLevel == 0) {
-        fprintf(stderr, "No opened scope can be closed.\n");
+    if(symbolTable.currentLevel < 0)
+    {
+        printf("void closeScope(): Error: current level < 0. No scope can be close.\n");
         return;
     }
-    SymbolTableEntry* head = symbolTable.scopeStack->scopeStart;
-
-    while (head) {
-        int hashIndex = HASH(head->name);
-        removeFromHashChain(hashIndex, head);
-        if (head->sameNameInOuterLevel)
-            insertIntoHashChain(hashIndex, head->sameNameInOuterLevel);
-        SymbolTableEntry* next = head->nextInSameLevel;
-        head = next;
+    SymbolTableEntry* scopeChain = symbolTable.scopeDisplay[symbolTable.currentLevel];
+    SymbolTableEntry* nextScopeChain = NULL;
+    while(scopeChain)
+    {
+        int hashIndex = HASH(scopeChain->name);
+        removeFromHashTrain(hashIndex, scopeChain);
+        if(scopeChain->sameNameInOuterLevel)
+        {
+            enterIntoHashTrain(hashIndex, scopeChain->sameNameInOuterLevel);
+        }
+        nextScopeChain = scopeChain->nextInSameLevel;
+        scopeChain = nextScopeChain;
     }
-
-    ScopeStack* prevScope = symbolTable.scopeStack->prevScope; // return to the previous scope
-    symbolTable.scopeStack = prevScope;
-    symbolTable.currentLevel -= 1;
-}
-
-int isCurrentScopeGlobal()
-{
-    return symbolTable.currentLevel == 0;
+    //
+    symbolTable.scopeDisplay[symbolTable.currentLevel] = NULL;
+    //
+    --symbolTable.currentLevel;
 }
