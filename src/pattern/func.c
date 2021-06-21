@@ -1,17 +1,17 @@
 int k;
 
 
-void Try() {
+void try() {
     if (k < 10) {
         write(k);
         write("\n");
         k = k + 1;
-        Try();
+        try();
     }
 }
 
-int MAIN() {
+int main() {
     k = 0;
-    Try();
+    try();
     return 0;
 }

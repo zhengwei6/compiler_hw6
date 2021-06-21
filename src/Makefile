@@ -1,16 +1,16 @@
 TARGET = parser
-OBJECT = parser.tab.c parser.tab.o lex.yy.c alloc.o functions.o semanticAnalysis.o symbolTable.o codegen.o
-OUTPUT = parser.output parser.tab.h a.out
+OBJECT = parser.tab.c parser.tab.o lex.yy.c alloc.o functions.o semanticAnalysis.o symbolTable.o codeGeneration.o
+OUTPUT = parser.output parser.tab.h
 CC = gcc -g
 LEX = flex
 YACC = bison -v
 YACCFLAG = -d
 LIBS = -lfl 
 
-parser: parser.tab.o alloc.o functions.o symbolTable.o semanticAnalysis.o codegen.o
-	$(CC) -o $(TARGET) parser.tab.o alloc.o functions.o symbolTable.o semanticAnalysis.o codegen.o $(LIBS)
+parser: parser.tab.o alloc.o functions.o symbolTable.o semanticAnalysis.o 
+	$(CC) -o $(TARGET) parser.tab.o alloc.o functions.o symbolTable.o semanticAnalysis.o codeGeneration.o $(LIBS)
 
-parser.tab.o: parser.tab.c lex.yy.c alloc.o functions.c symbolTable.o semanticAnalysis.o
+parser.tab.o: parser.tab.c lex.yy.c alloc.o functions.c symbolTable.o semanticAnalysis.o codeGeneration.o
 	$(CC) -c parser.tab.c
     
 semanticAnalysis.o: semanticAnalysis.c symbolTable.o
@@ -18,9 +18,6 @@ semanticAnalysis.o: semanticAnalysis.c symbolTable.o
 
 symbolTable.o: symbolTable.c
 	$(CC) -c symbolTable.c
-
-codegen.o: codegen.c
-	$(CC) -std=c99 -c $<
 
 lex.yy.c: lexer3.l
 	$(LEX) lexer3.l
@@ -33,6 +30,9 @@ alloc.o: alloc.c
 	
 functions.o: functions.c
 	$(CC) -c functions.c
+
+codeGeneration.o: codeGeneration.c
+	$(CC) -c codeGeneration.c
 
 clean:
 	rm -f $(TARGET) $(OBJECT) $(OUTPUT)
